@@ -7,25 +7,28 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Slider } from "@/components/ui/slider"
 import { Search, File, Download, Star, Brain, Filter } from "lucide-react"
 import { useState } from "react"
-
-// Mock search results
-const searchResults = [
-  { id: '1', name: 'machine-learning-basics.pdf', similarity: 95, size: '2.4 MB', peer: 'peer1', type: 'pdf' },
-  { id: '2', name: 'deep-learning-tutorial.docx', similarity: 87, size: '1.8 MB', peer: 'peer2', type: 'document' },
-  { id: '3', name: 'neural-networks.md', similarity: 82, size: '156 KB', peer: 'peer1', type: 'text' },
-  { id: '4', name: 'ai-research-paper.pdf', similarity: 78, size: '3.2 MB', peer: 'peer3', type: 'pdf' },
-  { id: '5', name: 'ml-dataset.csv', similarity: 72, size: '45 MB', peer: 'peer2', type: 'data' },
-]
+import { useEmbeddingSearch } from "@/hooks/useWails"
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [similarityThreshold, setSimilarityThreshold] = useState([70])
-  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  
+  const embeddingSearch = useEmbeddingSearch()
 
-  const handleSearch = () => {
-    setIsSearching(true)
-    // Simulate search delay
-    setTimeout(() => setIsSearching(false), 1000)
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return
+    
+    try {
+      const results = await embeddingSearch.mutateAsync({
+        query: searchQuery,
+        threshold: similarityThreshold[0]
+      })
+      setSearchResults(Array.isArray(results) ? results : [])
+    } catch (error) {
+      console.error('Search failed:', error)
+      setSearchResults([])
+    }
   }
 
   const getSimilarityColor = (similarity: number) => {
@@ -75,10 +78,10 @@ export default function SearchPage() {
               </div>
               <Button 
                 onClick={handleSearch}
-                disabled={isSearching}
+                disabled={embeddingSearch.isPending || !searchQuery.trim()}
                 className="bg-gradient-primary shadow-primary hover:shadow-glow transition-all"
               >
-                {isSearching ? 'Searching...' : 'Search Network'}
+                {embeddingSearch.isPending ? 'Searching...' : 'Search Network'}
               </Button>
             </div>
 
